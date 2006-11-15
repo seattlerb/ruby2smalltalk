@@ -224,9 +224,9 @@ class RubyToSmalltalk < SexpProcessor
     exp.shift.to_s
   end
 
-  def process_global(exp)
-    abort exp.inspect
-  end
+#   def process_global(exp)
+#     abort exp.inspect
+#   end
 
   def process_false(exp)
     "false"
@@ -271,9 +271,9 @@ class RubyToSmalltalk < SexpProcessor
     r.join
   end
 
-  def process_ivar(exp)
-    abort exp.inspect
-  end
+#   def process_ivar(exp)
+#     abort exp.inspect
+#   end
 
   def process_lasgn(exp)
     lhs = exp.shift
@@ -358,17 +358,17 @@ class RubyToSmalltalk < SexpProcessor
     "#{lhs} at: #{rhs} put: ((#{lhs} at: #{rhs}) rubyFalse #{op} #{val})"
   end
 
-  def process_op_asgn_and(exp)
-    abort exp.inspect
-  end
+#   def process_op_asgn_and(exp)
+#     abort exp.inspect
+#   end
 
-  def process_op_asgn_or(exp)
-    abort exp.inspect
-  end
+#   def process_op_asgn_or(exp)
+#     abort exp.inspect
+#   end
 
-  def process_or(exp)
-    abort exp.inspect
-  end
+#   def process_or(exp)
+#     abort exp.inspect
+#   end
 
   def process_return(exp)
     "^" + (exp.empty? ? "" : " #{process(exp.shift)}")
