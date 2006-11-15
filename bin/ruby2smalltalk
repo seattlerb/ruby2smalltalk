@@ -1,0 +1,18 @@
+#!/usr/local/bin/ruby -w
+
+require 'rubygems'
+require 'ruby2smalltalk'
+
+code = []
+
+ARGV.unshift "-" if ARGV.empty?
+ARGV.each do |path|
+  code << if path == "-" then
+            $stdin.read
+          else
+            File.read(path)
+          end
+end
+
+puts RubyToSmalltalk.translate(code.join("\n\n"))
+
