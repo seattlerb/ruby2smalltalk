@@ -1,32 +1,27 @@
 ruby2smalltalk
-    by FIX
-    FIX
+    by Ryan Davis <ryand-ruby@zenspider.com>
 
 == DESCRIPTION:
   
-FIX
+Translates ruby to smalltalk using ParseTree
 
 == FEATURES/PROBLEMS:
   
-* FIX
-
-== SYNOPSYS:
-
-    FIX
+* Incomplete - 60ish tests to go.
 
 == REQUIREMENTS:
 
-+ FIX
++ ParseTree
 
 == INSTALL:
 
-+ FIX
++ sudo gem install ruby2smalltalk
 
 == LICENSE:
 
 (The MIT License)
 
-Copyright (c) 2006 FIX
+Copyright (c) 2006 Ryan Davis
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
