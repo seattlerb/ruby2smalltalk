@@ -1,16 +1,18 @@
 # -*- ruby -*-
 
-require 'rubygems'
-require 'hoe'
-require './lib/ruby2smalltalk.rb'
+require "rubygems"
+require "hoe"
 
-Hoe.new('ruby2smalltalk', RubyToSmalltalk::VERSION) do |p|
-  p.rubyforge_name = 'ruby2smalltalk'
-  p.summary = 'Translates ruby to smalltalk.'
-  p.description = p.paragraphs_of('README.txt', 2..5).join("\n\n")
-  p.url = p.paragraphs_of('README.txt', 0).first.split(/\n/)[1..-1]
-  p.changes = p.paragraphs_of('History.txt', 0..1).join("\n\n")
-  p.extra_deps << ["ParseTree", ">= 1.6.1"]
+%w(sexp_processor ruby_parser RubyInline ZenTest).each do |project|
+  Hoe.add_include_dirs "../../#{project}/dev/lib"
+end
+
+Hoe.plugin :seattlerb
+
+Hoe.spec "ruby2smalltalk" do
+  developer "Ryan Davis", "ryand-ruby@zenspider.com"
+
+  dependency "ruby_parser", "~> 3.0"
 end
 
 # vim: syntax=Ruby

@@ -2,15 +2,15 @@
 
 require 'rubygems'
 require 'sexp_processor'
-require 'parse_tree'
+require 'ruby_parser'
 
 class RubyToSmalltalk < SexpProcessor
   VERSION = '1.0.0'
   BINARY_MSGS = [ :==, :<, :>, :<=, :>=, :+, :-, :*, :/, :| ]
   KEYWORD_MSGS = [ :puts, :upto, :downto, :p ]
-  
-  def self.translate(klass_or_str, method=nil)
-    self.new.process(ParseTree.translate(klass_or_str, method))
+
+  def self.translate(src, f = "(string)", t = 10) # parens for emacs *sigh*
+    self.new.process(RubyParser.new.process(src, f, t))
   end
 
   def initialize
@@ -39,6 +39,7 @@ class RubyToSmalltalk < SexpProcessor
   end
 
   def process_array(exp)
+    return "{}" if exp.empty?
     r = []
     r << process(exp.shift) until exp.empty?
     "{ #{r.join('. ')} }"
@@ -55,24 +56,32 @@ class RubyToSmalltalk < SexpProcessor
   end
 
   def process_call(exp)
-    lhs = process(exp.shift)
-    msg = exp.shift
+    recv = exp.shift
+    mesg = exp.shift
+    args = exp.dup
+    arity = args.size
 
-    rhs = exp.shift
-    if rhs then
-      rhs[0] = :arglist
-      rhs = process(rhs)
-    end
-    
-    KEYWORD_MSGS << msg
+    exp.clear
 
-    unless rhs then # unary
+    lhs = process(recv)
+    msg = mesg
+
+    lhs ||= "self"
+
+    rhs = process_arglist args
+
+    KEYWORD_MSGS << msg # TODO: why?
+
+    case arity
+    when 0 # unary
       "#{lhs} #{msg}"
-    else # binary or keyword
+    else
       case msg
       when *BINARY_MSGS then
         rhs = $1 if rhs =~ /^\{ (.*) \}$/
-        "( #{lhs} ) #{msg} ( #{rhs} )"
+        lhs = "( #{lhs} )" if lhs =~ / / # HACK - look at sexp
+        rhs = "( #{rhs} )" if rhs =~ / / # HACK - look at sexp
+        "#{lhs} #{msg} #{rhs}"
       when *KEYWORD_MSGS then
         case msg
         when :upto, :downto then # HACK
@@ -85,7 +94,7 @@ class RubyToSmalltalk < SexpProcessor
       end
     end
   end
-  
+
   def process_class(exp)
     new_exp = Sexp.from_array exp
     exp.clear
@@ -118,43 +127,27 @@ class RubyToSmalltalk < SexpProcessor
     exp.shift.to_s
   end
 
-# [:defn, :xx, [:scope, [:block, [:args], [:nil]]]]
-
-# [:defn, :xx, [:ivar, :@reader]]
-# [:defn, :x=, [:attrset, :@writer]]
-
-# [:defn, :xx, [:scope, [:block, [:args, :a, :b, :"*c", [:block, [:lasgn, :b, [:lit, 42]]]], [:block_arg, :d], [:fcall, :p, [:array, [:lvar, :a], [:lvar, :b], [:lvar, :c], [:lvar, :d]]]]]]
-# [:defn, :x?, [:scope, [:block, [:args], [:nil]]]]
-# [:defn, :|,  [:scope, [:block, [:args], [:nil]]]]
-
-# [:defn, :xx, [:bmethod, [:dasgn_curr, :x], [:call, [:dvar, :x], :+, [:array, [:lit, 1]]]]]
-# [:defn, :xx, [:dmethod, :bmethod_maker, [:scope, [:block, [:args], [:iter, [:fcall, :define_method, [:array, [:lit, :bmethod_added]]], [:dasgn_curr, :x], [:call, [:dvar, :x], :+, [:array, [:lit, 1]]]]]]]]
-# [:defn, :xx, [:fbody, [:scope, [:block, [:args], [:call, [:lit, 1], :+, [:array, [:lit, 1]]]]]]]
-
   def process_defn(exp)
-    new_exp = Sexp.from_array(exp)
-    exp.clear
-    exp = new_exp # for convention
-
     name = exp.shift
+    args = exp.shift
+    body = exp.dup
+
+    exp.clear
+
     @method_name = name # for zsuper rewriters and such
-    meth_type = exp.first.first
-    case meth_type
-    when :scope then
-      args = exp.scope.block.args(true)
-      abort args.inspect unless args # FIX
 
-      opt_args = args.block(true)
-      block_arg = process(exp.scope.block.block_arg(true))
-      body = process(exp.shift)
-      arity = args.size - 1
+    opt_args = args.block(true)
+    block_arg = process(body.block_arg(true))
 
-      name = case name.to_s
-             when /\?$/ then
-               "is_#{name.to_s[0..-2]}".intern
-             else
-               name
-             end
+    body = process_block body
+    arity = args.size - 1
+
+    name = case name.to_s
+           when /\?$/ then
+             "is_#{name.to_s[0..-2]}".intern
+           else
+             name
+           end
 
       case arity
       when 0 then
@@ -164,35 +157,37 @@ class RubyToSmalltalk < SexpProcessor
           "#{name} #{process(args)}\n\n#{indent(body)}"
         else
           arg = process(args)
-          "#{name}: args
+          <<-"ST80".gsub(/^            /, "").chomp
+            #{name}: args
 
-  | #{arg} |
-  ( args class == Array ) ifTrue: [ #{arg} := args at: 1. ] ifFalse: [ #{arg} := args ].
+              | #{arg} |
+              ( args class == Array ) ifTrue: [ #{arg} := args at: 1. ] ifFalse: [ #{arg} := args ].
 
-#{indent(body)}"
+            #{indent(body)}
+          ST80
         end
       else
         r = "#{name}: args\n\n"
         r << "  | "
         args.shift # :args
-        r << args.map { |arg|
-          case arg.to_s
+        r << args.map { |arg2|
+          case arg2.to_s
           when /^\*/ then
-            arg.to_s[1..-1]
+            arg2.to_s[1..-1]
           else
-            arg.to_s
+            arg2.to_s
           end
         }.join(" ") + (block_arg ? " #{block_arg}" : "")
 
         r << " |\n\n"
 
-        args.each do |arg|
-          case arg.to_s
+        args.each do |arg2|
+          case arg2.to_s
           when /^\*/ then
             r << indent("#{block_arg} := args removeLast.\n") if block_arg
-            r << indent("#{arg.to_s[1..-1]} := args.\n")
+            r << indent("#{arg2.to_s[1..-1]} := args.\n")
           else
-            r << indent("#{arg} := args removeFirst.\n")
+            r << indent("#{arg2} := args removeFirst.\n")
           end
         end
 
@@ -209,9 +204,6 @@ class RubyToSmalltalk < SexpProcessor
         r << "#{indent(body)}"
         r
       end
-    else
-      raise "unhandled defn type #{meth_type}"
-    end
   end
 
   def process_defs(exp)
@@ -366,9 +358,9 @@ class RubyToSmalltalk < SexpProcessor
 #     abort exp.inspect
 #   end
 
-#   def process_or(exp)
-#     abort exp.inspect
-#   end
+  def process_or(exp)
+    "#{process(exp.shift)} | #{process(exp.shift)}"
+  end
 
   def process_return(exp)
     "^" + (exp.empty? ? "" : " #{process(exp.shift)}")
@@ -401,7 +393,7 @@ class RubyToSmalltalk < SexpProcessor
     cond = process(exp.shift)
     body = process(exp.shift)
     head_controlled = exp.empty? ? false : exp.shift
-    
+
     if head_controlled then
       "[ #{cond} ] whileFalse: [ #{body} ]"
     else
@@ -413,7 +405,7 @@ class RubyToSmalltalk < SexpProcessor
     cond = process(exp.shift)
     body = process(exp.shift)
     head_controlled = exp.empty? ? false : exp.shift
-    
+
     if head_controlled then
       "[ #{cond} ] whileTrue: [ #{body} ]"
     else
@@ -426,17 +418,13 @@ class RubyToSmalltalk < SexpProcessor
     "self #{exp.shift}"
   end
 
-  def process_zarray(exp)
-    "{}"
-  end
-
   def process_zsuper(exp)
     "super #{@method_name}"
   end
 
   ############################################################
-  
+
   def indent(s)
-    s.to_s.map{|line| @indent + line}.join
+    s.lines.map{|line| @indent + line}.join
   end
 end
