@@ -10,9 +10,17 @@ class SmalltalkTestCase < ParseTreeTestCase
   testcase_order << "RubyToSmalltalk"
 
   def self.skip *names
-    names.each do |name|
+    names.flatten.each do |name|
       add_tests(name, "RubyToSmalltalk" => :skip)
     end
+  end
+
+  def self.skip18 *names
+    skip names.map { |s| "#{s}__18" }
+  end
+
+  def self.skip19 *names
+    skip names.map { |s| "#{s}__19_20_21_22_23" }
   end
 
   skip("alias",
@@ -328,6 +336,83 @@ class SmalltalkTestCase < ParseTreeTestCase
        "yield_array_1",
        "yield_array_n",
        "yield_n")
+
+  skip18(
+       "call_arglist_norm_hash_splat",
+       "call_arglist_space",
+       "fcall_arglist_norm_hash_splat",
+       "if_args_no_space_symbol",
+       "if_post_not",
+       "if_pre_not",
+       "iter_args_ivar",
+       "iter_masgn_args_ivar",
+       "not",
+       "str_question_control",
+       "str_question_escape",
+       "str_question_literal",
+       "unless_post_not",
+       "unless_pre_not",
+       "until_post_not",
+       "until_pre_not",
+       "until_pre_not_mod",
+       "while_post_not",
+       "while_pre_not",
+       "while_pre_not_mod",
+        )
+
+  skip19(
+       "array_bare_hash",
+       "array_bare_hash_labels",
+       "call_arglist_norm_hash_colons",
+       "call_arglist_trailing_comma",
+       "call_bang",
+       "call_bang_empty",
+       "call_fonz",
+       "call_fonz_cm",
+       "call_not",
+       "call_not_equal",
+       "call_splat_mid",
+       "defn_args_mand_opt_mand",
+       "defn_args_mand_opt_splat_mand",
+       "defn_args_opt_mand",
+       "defn_args_opt_splat_mand",
+       "defn_args_splat_mand",
+       "defn_args_splat_middle",
+       "fcall_arglist_hash_colons",
+       "hash_new",
+       "hash_new_no_space",
+       "hash_new_with_keyword",
+       "if_post_not",
+       "if_pre_not",
+       "label_in_bare_hash_in_array_in_ternary",
+       "label_in_callargs_in_ternary",
+       "not",
+       "splat_fcall_middle",
+       "stabby_args_0_no_parens",
+       "stabby_args_0_no_parens_doend",
+       "stabby_args_0_spacebar_broken",
+       "stabby_args_1",
+       "stabby_args_1_doend",
+       "stabby_args_1_no_parens",
+       "stabby_args_1_no_parens_doend",
+       "stabby_args_2",
+       "stabby_args_2_doend",
+       "stabby_args_2_no_parens",
+       "stabby_args_2_no_parens_doend",
+       "stabby_args",
+       "stabby_args_doend",
+       "str_question_control",
+       "str_question_escape",
+       "str_question_literal",
+       "unless_post_not",
+       "unless_pre_not",
+       "until_post_not",
+       "until_pre_not",
+       "until_pre_not_mod",
+       "while_post_not",
+       "while_pre_not",
+       "while_pre_not_mod",
+      )
 
 end
 
